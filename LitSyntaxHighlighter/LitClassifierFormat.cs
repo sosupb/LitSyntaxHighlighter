@@ -64,7 +64,7 @@ namespace LitSyntaxHighlighter
         public LitQuoteFormatDefinition()
         {
             this.DisplayName = "Lit Quote (String Literal)";
-            this.ForegroundColor = ThemeUtility.IsLightTheme ? Colors.Black : Color.FromRgb(210, 210, 210);
+            this.ForegroundColor = ThemeUtility.IsLightTheme ? Colors.Black : Color.FromRgb(214, 157, 133);
         }
     }
 
@@ -78,7 +78,7 @@ namespace LitSyntaxHighlighter
         public LitAttributeValueFormatDefinition()
         {
             this.DisplayName = "Lit Attribute Value (String Literal)";
-            this.ForegroundColor = ThemeUtility.IsLightTheme ? Colors.Blue : Color.FromRgb(200, 200, 200);
+            this.ForegroundColor = ThemeUtility.IsLightTheme ? Colors.Black : Color.FromRgb(214, 157, 133);
         }
     }
 
@@ -92,7 +92,7 @@ namespace LitSyntaxHighlighter
         public LitTextFormatDefinition()
         {
             this.DisplayName = "Lit Text (String Literal)";
-            this.ForegroundColor = ThemeUtility.IsLightTheme ? Colors.Black : Color.FromRgb(214, 157, 133);
+            this.ForegroundColor = ThemeUtility.IsLightTheme ? Colors.Black : Color.FromRgb(210, 210, 210);
         }
     }
 }
