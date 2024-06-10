@@ -123,4 +123,18 @@ namespace LitSyntaxHighlighter
             this.ForegroundColor = ThemeUtility.IsLightTheme ? Colors.Black : Color.FromRgb(210, 210, 210);
         }
     }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = FormatNames.Comment)]
+    [Name(FormatNames.Comment)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class LitCommentFormatDefinition : ClassificationFormatDefinition
+    {
+        public LitCommentFormatDefinition()
+        {
+            this.DisplayName = "Lit Comment (String Literal)";
+            this.ForegroundColor = ThemeUtility.IsLightTheme ? Colors.Green : Color.FromRgb(87, 166, 74);
+        }
+    }
 }

@@ -25,8 +25,9 @@ namespace LitSyntaxHighlighter
             { "boolean", new Regex("\\?[A-Za-z0-9]+=", RegexOptions.IgnoreCase) },
             { "eventListener", new Regex("@[A-Za-z0-9]+=", RegexOptions.IgnoreCase) },
             { "attributeName", new Regex("[A-Za-z0-9]+=", RegexOptions.IgnoreCase) },
-            { "selfClosingTag", new Regex("(\\/)?>", RegexOptions.IgnoreCase) },
-            { "text", new Regex("^[^\"]*$", RegexOptions.IgnoreCase) }
+            { "selfClosingTag", new Regex("(\\/)?(?<!-)>", RegexOptions.IgnoreCase) },
+            { "text", new Regex("^[^\"]*$", RegexOptions.IgnoreCase) },
+            { "comment", new Regex("<!--[\\s\\S]*-->", RegexOptions.IgnoreCase) }
 
         };
 
@@ -45,6 +46,7 @@ namespace LitSyntaxHighlighter
                 { FormatNames.EventName, registry.GetClassificationType(FormatNames.EventName) },
                 { FormatNames.Quote, registry.GetClassificationType(FormatNames.Quote) },
                 { FormatNames.AttributeValue, registry.GetClassificationType(FormatNames.AttributeValue) },
+                { FormatNames.Comment, registry.GetClassificationType(FormatNames.Comment) },
                 { FormatNames.Text, registry.GetClassificationType(FormatNames.Text) }
             };
 
@@ -159,6 +161,11 @@ namespace LitSyntaxHighlighter
                     case "selfClosingTag":
                         {
                             ProcessSelfClosingTag(str, list);
+                            break;
+                        }
+                    case "comment":
+                        {
+                            ProcessComments(str, list);
                             break;
                         }
                     case "text":
@@ -343,6 +350,11 @@ namespace LitSyntaxHighlighter
 
                 currentCharIndex += 1;
             }
+        }
+
+        private void ProcessComments(SnapshotSpan span, IList<ClassificationSpan> list)
+        {
+            list.Add(new ClassificationSpan(new SnapshotSpan(span.Start, span.End), classificationTypes[FormatNames.Comment]));
         }
 
         private void ProcessText(SnapshotSpan span, IList<ClassificationSpan> list)

@@ -17,6 +17,7 @@ namespace LitSyntaxHighlighter
         public const string Quote = "LitQuote";
         public const string AttributeValue = "LitAttributeValue";
         public const string Text = "LitText";
+        public const string Comment = "LitComment";
     }
 
     /// <summary>
@@ -58,6 +59,10 @@ namespace LitSyntaxHighlighter
         [Export(typeof(ClassificationTypeDefinition))]
         [Name(FormatNames.Text)]
         internal static ClassificationTypeDefinition Text = null;
+
+        [Export(typeof(ClassificationTypeDefinition))]
+        [Name(FormatNames.Comment)]
+        internal static ClassificationTypeDefinition Comment = null;
 
 #pragma warning restore 169
     }
