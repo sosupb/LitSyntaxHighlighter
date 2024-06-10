@@ -12,6 +12,8 @@ namespace LitSyntaxHighlighter
         public const string Delimiter = "LitDelimiter";
         public const string Element = "LitElement";
         public const string AttributeName = "LitAttributeName";
+        public const string AttributeDelimiter = "LitAttributeDelimiter";
+        public const string EventName = "LitEventName";
         public const string Quote = "LitQuote";
         public const string AttributeValue = "LitAttributeValue";
         public const string Text = "LitText";
@@ -36,6 +38,14 @@ namespace LitSyntaxHighlighter
         [Export(typeof(ClassificationTypeDefinition))]
         [Name(FormatNames.AttributeName)]
         internal static ClassificationTypeDefinition AttributeName = null;
+
+        [Export(typeof(ClassificationTypeDefinition))]
+        [Name(FormatNames.AttributeDelimiter)]
+        internal static ClassificationTypeDefinition AttributeDelimiter = null;
+
+        [Export(typeof(ClassificationTypeDefinition))]
+        [Name(FormatNames.EventName)]
+        internal static ClassificationTypeDefinition EventName = null;
 
         [Export(typeof(ClassificationTypeDefinition))]
         [Name(FormatNames.Quote)]

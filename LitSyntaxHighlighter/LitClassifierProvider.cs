@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using System;
 using System.ComponentModel.Composition;
@@ -21,10 +22,10 @@ namespace LitSyntaxHighlighter
         /// to the custom classification type later.
         /// </summary>
         [Import]
-        private IClassificationTypeRegistryService classificationRegistry;
+        private IClassificationTypeRegistryService classificationRegistry = null;
 
         [Import]
-        internal IClassifierAggregatorService classifierAggregator;
+        internal IClassifierAggregatorService classifierAggregator = null;
 
 #pragma warning restore 649
 
@@ -50,7 +51,10 @@ namespace LitSyntaxHighlighter
                 {
                     throw new NullReferenceException(nameof(classificationRegistry));
                 }
-
+                if (classifierAggregator == null)
+                {
+                    throw new NullReferenceException(nameof(classifierAggregator));
+                }
                 createdClassifier = true;
 
                 return buffer.Properties.GetOrCreateSingletonProperty(creator: () => new LitClassifier(classificationRegistry, classifierAggregator.GetClassifier(buffer)));

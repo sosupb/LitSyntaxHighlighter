@@ -55,10 +55,38 @@ namespace LitSyntaxHighlighter
     }
 
     [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = FormatNames.AttributeDelimiter)]
+    [Name(FormatNames.AttributeDelimiter)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class LitAttributeDelimiterFormatDefinition : ClassificationFormatDefinition
+    {
+        public LitAttributeDelimiterFormatDefinition()
+        {
+            this.DisplayName = "Lit Attribute Delimiter (String Literal)";
+            this.ForegroundColor = ThemeUtility.IsLightTheme ? Colors.Purple : Colors.Purple;
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
+    [ClassificationType(ClassificationTypeNames = FormatNames.EventName)]
+    [Name(FormatNames.EventName)]
+    [UserVisible(true)]
+    [Order(After = Priority.High)]
+    internal sealed class LitEventNameFormatDefinition : ClassificationFormatDefinition
+    {
+        public LitEventNameFormatDefinition()
+        {
+            this.DisplayName = "Lit Event Name (String Literal)";
+            this.ForegroundColor = ThemeUtility.IsLightTheme ? Color.FromRgb(116, 83, 31) : Color.FromRgb(220, 220, 170);
+        }
+    }
+
+    [Export(typeof(EditorFormatDefinition))]
     [ClassificationType(ClassificationTypeNames = FormatNames.Quote)]
     [Name(FormatNames.Quote)]
     [UserVisible(true)]
-    [Order(After = Priority.High)]
+    [Order(After = Priority.Low)]
     internal sealed class LitQuoteFormatDefinition : ClassificationFormatDefinition
     {
         public LitQuoteFormatDefinition()
@@ -86,7 +114,7 @@ namespace LitSyntaxHighlighter
     [ClassificationType(ClassificationTypeNames = FormatNames.Text)]
     [Name(FormatNames.Text)]
     [UserVisible(true)]
-    [Order(After = Priority.High)]
+    [Order(After = Priority.Low)]
     internal sealed class LitTextFormatDefinition : ClassificationFormatDefinition
     {
         public LitTextFormatDefinition()
