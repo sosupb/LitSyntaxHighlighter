@@ -1,6 +1,4 @@
 ﻿using LitSyntaxHighlighter.Utility;
-using Microsoft.VisualStudio.PlatformUI;
-using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Utilities;
 using System.ComponentModel.Composition;
@@ -8,8 +6,8 @@ using System.Windows.Media;
 
 namespace LitSyntaxHighlighter
 {
-    // When JS file is opened, the format definitions are created
-    // Closing and reopen JS file, doesn't recreate the definitions
+    // When JS/TS file is opened, the format definitions are created
+    // Closing and reopen JS/TS file, doesn't recreate the definitions
 
     [Export(typeof(EditorFormatDefinition))]
     [ClassificationType(ClassificationTypeNames = FormatNames.Delimiter)]

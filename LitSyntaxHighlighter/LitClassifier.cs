@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Windows.Documents;
 
 namespace LitSyntaxHighlighter
 {
@@ -106,7 +105,11 @@ namespace LitSyntaxHighlighter
             return result;
         }
 
-
+        /// <summary>
+        /// Scans current span for all regex types
+        /// </summary>
+        /// <param name="span"></param>
+        /// <returns></returns>
         private List<ClassificationSpan> ScanLiteral(SnapshotSpan span)
         {
             var result = new List<ClassificationSpan>();
@@ -114,6 +117,7 @@ namespace LitSyntaxHighlighter
 
             foreach (var keyValuePair in regexes)
             {
+                // if we are tracking a comment block only accept a comment End or text
                 if (!isTrackingComment || keyValuePair.Key == "commentEnd" || keyValuePair.Key == "text")
                 {
                     AddMatchingHighlighting(keyValuePair, literal, span, result);
@@ -123,11 +127,23 @@ namespace LitSyntaxHighlighter
             return result;
         }
 
+        /// <summary>
+        /// Determine if the given characters can be part of a name
+        /// </summary>
+        /// <param name="c"></param>
+        /// <returns></returns>
         private bool IsNameChar(char c)
         {
             return c == '_' || c == '-' || char.IsLetterOrDigit(c);
         }
 
+        /// <summary>
+        /// Given a regex type, find all matches inside the text and process classifications accordingly
+        /// </summary>
+        /// <param name="regex">The regex value to match against</param>
+        /// <param name="text">The text to match against </param>
+        /// <param name="span">The original span the text belongs to.</param>
+        /// <param name="list">The current running list of classification types</param>
         private void AddMatchingHighlighting(KeyValuePair<string, Regex> regex, string text, SnapshotSpan span, IList<ClassificationSpan> list)
         {
             foreach (Match match in regex.Value.Matches(text))
@@ -395,7 +411,7 @@ namespace LitSyntaxHighlighter
                 currentCharIndex += 1;
             }
 
-            // final check if we are still tracking a word
+            // final check if we are still tracking an open text
             if(nameStartIndex.HasValue)
             {
                 int length = currentCharIndex - nameStartIndex.Value;
