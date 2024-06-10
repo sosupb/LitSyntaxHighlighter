@@ -16,18 +16,21 @@ namespace LitSyntaxHighlighter
         private readonly IDictionary<string, IClassificationType> classificationTypes;
         readonly private IClassifier classifier;
 
+        private bool isTrackingComment = false;
+
         private static Dictionary<string, Regex> regexes = new Dictionary<string, Regex>()
         {
+            { "commentStart", new Regex("<!--", RegexOptions.IgnoreCase) },
+            { "text", new Regex("^[^\"]*$", RegexOptions.IgnoreCase) },
+            { "commentEnd", new Regex("-->", RegexOptions.IgnoreCase) },
             { "attributeValue", new Regex("\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\"", RegexOptions.IgnoreCase) },
-            { "openTag", new Regex("<([A-Za-z0-9]+(-[A-Za-z0-9]+)*)(\\/)?>?", RegexOptions.IgnoreCase) },
+            { "openTag", new Regex("(?<!!)<([A-Za-z0-9]+(-[A-Za-z0-9]+)*)(\\/)?>?", RegexOptions.IgnoreCase) },
             { "closingTag", new Regex("</([A-Za-z0-9]+(-[A-Za-z0-9]+)*)>", RegexOptions.IgnoreCase) },
             { "property", new Regex("\\.[A-Za-z0-9]+=", RegexOptions.IgnoreCase) },
             { "boolean", new Regex("\\?[A-Za-z0-9]+=", RegexOptions.IgnoreCase) },
             { "eventListener", new Regex("@[A-Za-z0-9]+=", RegexOptions.IgnoreCase) },
             { "attributeName", new Regex("[A-Za-z0-9]+=", RegexOptions.IgnoreCase) },
-            { "selfClosingTag", new Regex("(\\/)?(?<!-)>", RegexOptions.IgnoreCase) },
-            { "text", new Regex("^[^\"]*$", RegexOptions.IgnoreCase) },
-            { "comment", new Regex("<!--[\\s\\S]*-->", RegexOptions.IgnoreCase) }
+            { "selfClosingTag", new Regex("(\\/)?(?<!-)>", RegexOptions.IgnoreCase) }
 
         };
 
@@ -111,7 +114,10 @@ namespace LitSyntaxHighlighter
 
             foreach (var keyValuePair in regexes)
             {
-                AddMatchingHighlighting(keyValuePair, literal, span, result);
+                if (!isTrackingComment || keyValuePair.Key == "commentEnd" || keyValuePair.Key == "text")
+                {
+                    AddMatchingHighlighting(keyValuePair, literal, span, result);
+                }
             }
 
             return result;
@@ -163,7 +169,8 @@ namespace LitSyntaxHighlighter
                             ProcessSelfClosingTag(str, list);
                             break;
                         }
-                    case "comment":
+                    case "commentStart":
+                    case "commentEnd":
                         {
                             ProcessComments(str, list);
                             break;
@@ -354,6 +361,14 @@ namespace LitSyntaxHighlighter
 
         private void ProcessComments(SnapshotSpan span, IList<ClassificationSpan> list)
         {
+            if(span.GetText() == "<!--")
+            {
+                isTrackingComment = true;
+            }
+            else
+            {
+                isTrackingComment = false;
+            }
             list.Add(new ClassificationSpan(new SnapshotSpan(span.Start, span.End), classificationTypes[FormatNames.Comment]));
         }
 
@@ -374,7 +389,7 @@ namespace LitSyntaxHighlighter
                 else if (nameStartIndex.HasValue && c == '<')
                 {
                     int length = currentCharIndex - nameStartIndex.Value;
-                    list.Add(new ClassificationSpan(new SnapshotSpan(span.Start + nameStartIndex.Value, length), classificationTypes[FormatNames.Text]));
+                    list.Add(new ClassificationSpan(new SnapshotSpan(span.Start + nameStartIndex.Value, length), classificationTypes[isTrackingComment ? FormatNames.Comment : FormatNames.Text]));
                     nameStartIndex = null;
                 }
                 currentCharIndex += 1;
@@ -384,7 +399,7 @@ namespace LitSyntaxHighlighter
             if(nameStartIndex.HasValue)
             {
                 int length = currentCharIndex - nameStartIndex.Value;
-                list.Add(new ClassificationSpan(new SnapshotSpan(span.Start + nameStartIndex.Value, length), classificationTypes[FormatNames.Text]));
+                list.Add(new ClassificationSpan(new SnapshotSpan(span.Start + nameStartIndex.Value, length), classificationTypes[isTrackingComment ? FormatNames.Comment : FormatNames.Text]));
                 nameStartIndex = null;
             }
         }
