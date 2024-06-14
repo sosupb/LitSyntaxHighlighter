@@ -44,11 +44,18 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="LitClassifier.cs" />
-    <Compile Include="LitClassifierClassificationDefinition.cs" />
-    <Compile Include="LitClassifierFormat.cs" />
-    <Compile Include="LitClassifierProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Tagger\LitTemplateTaggerProvider.cs" />
+    <Compile Include="Tagger\LitTemplateTagManager.cs" />
+    <Compile Include="Tagger\LitTemplateTagRegistry.cs" />
+    <Compile Include="Tagger\TagDefinitions\LitClassificationNames.cs" />
+    <Compile Include="Tagger\LitTemplateTagger.cs" />
+    <Compile Include="Tagger\TagDefinitions\LitTemplateAttributeNameDefinition.cs" />
+    <Compile Include="Tagger\TagDefinitions\LitTemplateCommentDefinition.cs" />
+    <Compile Include="Tagger\TagDefinitions\LitTemplateDelimiterDefinition.cs" />
+    <Compile Include="Tagger\TagDefinitions\LitTemplateElementDefinition.cs" />
+    <Compile Include="Tagger\TagDefinitions\LitTemplateEventNameDefinition.cs" />
+    <Compile Include="Tagger\TagDefinitions\LitTemplateTextDefinition.cs" />
     <Compile Include="Utility\ThemeUtility.cs" />
   </ItemGroup>
   <ItemGroup>
