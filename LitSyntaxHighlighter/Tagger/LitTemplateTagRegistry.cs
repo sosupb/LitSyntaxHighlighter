@@ -10,15 +10,19 @@ namespace LitSyntaxHighlighter.Tagger
     {
         Delimiter,
         Element,
+        SelfCloseElement,
+        CloseElement,
         AttributeName,
         EventName,
         Text,
-        Comment
+        Comment,
+        SelectedElement,
+        SelectedSelfCloseElement,
+        SelectedCloseElement,
     }
 
     internal class LitTemplateTagRegistry
-    {
-        
+    { 
         public IDictionary<TagType, ClassificationTag> ClassificationTags 
         { 
             get
@@ -27,6 +31,7 @@ namespace LitSyntaxHighlighter.Tagger
             }
         }
 
+        private bool _isLightTheme;
         private IDictionary<TagType, ClassificationTag> _darkThemeTags;
         private IDictionary<TagType, ClassificationTag> _lightThemeTags;
 
@@ -37,18 +42,28 @@ namespace LitSyntaxHighlighter.Tagger
                 { TagType.Delimiter, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.DelimiterLight)) },
                 { TagType.Comment, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.CommentLight)) },
                 { TagType.Element, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.ElementLight)) },
+                { TagType.SelfCloseElement, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.ElementLight)) },
+                { TagType.CloseElement, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.ElementLight)) },
                 { TagType.AttributeName, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.AttributeNameLight)) },
                 { TagType.EventName, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.EventNameLight)) },
-                { TagType.Text, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.TextLight)) }
+                { TagType.Text, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.TextLight)) },
+                { TagType.SelectedElement, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.SelectedElementNameLight)) },
+                { TagType.SelectedSelfCloseElement, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.SelectedElementNameLight)) },
+                { TagType.SelectedCloseElement, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.SelectedElementNameLight)) }
             };
             _darkThemeTags = new Dictionary<TagType, ClassificationTag>()
             {
                 { TagType.Delimiter, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.DelimiterDark)) },
                 { TagType.Comment, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.CommentDark)) },
                 { TagType.Element, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.ElementDark)) },
+                { TagType.SelfCloseElement, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.ElementDark)) },
+                { TagType.CloseElement, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.ElementDark)) },
                 { TagType.AttributeName, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.AttributeNameDark)) },
                 { TagType.EventName, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.EventNameDark)) },
-                { TagType.Text, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.TextDark)) }
+                { TagType.Text, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.TextDark)) },
+                { TagType.SelectedElement, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.SelectedElementNameDark)) },
+                { TagType.SelectedSelfCloseElement, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.SelectedElementNameDark)) },
+                { TagType.SelectedCloseElement, new ClassificationTag(registry.GetClassificationType(LitClassificationNames.SelectedElementNameDark)) }
             };
         }
     }

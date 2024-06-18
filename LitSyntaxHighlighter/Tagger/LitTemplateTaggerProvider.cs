@@ -20,7 +20,8 @@ namespace LitSyntaxHighlighter.Tagger
             return textView.Properties.GetOrCreateSingletonProperty(
                 () => new LitTemplateTagger(
                     _classificationRegistry,
-                    buffer
+                    buffer,
+                    textView
                 ) as ITagger<T>
             );
 

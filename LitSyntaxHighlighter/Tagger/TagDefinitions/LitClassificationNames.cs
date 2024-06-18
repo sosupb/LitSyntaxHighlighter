@@ -14,5 +14,7 @@
         public const string TextLight = "LitTextLight";
         public const string CommentDark = "LitCommentDark";
         public const string CommentLight = "LitCommentLight";
+        public const string SelectedElementNameDark = "LitSelectedElementNameDark";
+        public const string SelectedElementNameLight = "LitSelectedElementNameLight";
     }
 }
