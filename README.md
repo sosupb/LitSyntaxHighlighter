@@ -2,7 +2,7 @@
 
 # LitSyntaxHighlighter
 
-This extensions colorizes Lit.dev html templates within JavaScript and TypeScript files
+This is a VSIX extensions for colorizes Lit.dev html templates within Visual Studio 2022 for JavaScript and TypeScript files
 
 # Features
 - Colorizing of common and custom component tags, attributes, comment blocks:
