@@ -31,12 +31,13 @@ namespace LitSyntaxHighlighter.Tagger
         }
 
         private readonly Regex _openTemplateRegex = new Regex("html`", RegexOptions.IgnoreCase);
+        private readonly Regex _closeTemplateRegex = new Regex("(`|\\${|}|\")", RegexOptions.IgnoreCase);
 
         private SortedDictionary<SnapshotSpan, TagType> _tagCache;
         private ITextSnapshot _currentSnapshot;
         private bool _isParsingTags;
 
-        public bool IsDirty 
+        public bool IsDirty
         {  
             get
             {
@@ -166,7 +167,7 @@ namespace LitSyntaxHighlighter.Tagger
                 Debug.WriteLine($"ERROR: {ex.Message}");
             }
         }
-        // debug this now
+
         private KeyValuePair<SnapshotSpan, TagType>? FindMatchingTag(SnapshotSpan span, TagType type, TagType targetType)
         {
             bool isOpen = (type & TagType.OpenTags) > 0;
@@ -194,6 +195,59 @@ namespace LitSyntaxHighlighter.Tagger
             return null;
         }
 
+        private int FindMatchingCloseTemplate(SnapshotSpan span, int startIndex)
+        {
+            string literal = span.GetText();
+
+            Stack<string> stack = new Stack<string>();
+            foreach (Match closeMatch in _closeTemplateRegex.Matches(literal, startIndex))
+            {
+                var peek = stack.Count > 0 ? stack.Peek() : null;
+                if(closeMatch.Index > 4 && literal.Substring(closeMatch.Index - 4, 5) == "html`")
+                {
+                    stack.Push("html`");
+                }
+                else if(literal.Substring(closeMatch.Index, closeMatch.Length) == "${")
+                {
+                    stack.Push("${");
+                }
+                else if(literal.Substring(closeMatch.Index, closeMatch.Length) == "}")
+                {
+                    if(peek == "${")
+                    {
+                        stack.Pop();
+                    }
+                }
+                else if(literal.Substring(closeMatch.Index, closeMatch.Length) == "\"")
+                {
+                    if (peek == "\"")
+                    {
+                        stack.Pop();
+                    }
+                    else
+                    {
+                        stack.Push("\"");
+                    }
+                }
+                else if(literal.Substring(closeMatch.Index, closeMatch.Length) == "`")
+                {
+                    if(stack.Count() == 0)
+                    {
+                        return closeMatch.Index;
+                    }
+                    else if(peek == "`") 
+                    {
+                        stack.Pop();
+                    }
+                    else
+                    {
+                        stack.Push("`");
+                    }
+                }
+            }
+            return span.Length;
+        }
+
         private void CleanupRemainingSnapshotTags()
         {
             // update snapshot for remaining spans not effected by the change
@@ -205,12 +259,12 @@ namespace LitSyntaxHighlighter.Tagger
             }
         }
 
-        private void RemoveOldTemplateSpans(Match startMatch, int endIndex)
+        private void RemoveOldTemplateSpans(int startIndex, int endIndex)
         {
             // remove any old tags from the current template
             foreach (var oldCache in _tagCache.Keys
                 .Where(s => s.Snapshot != _currentSnapshot &&
-                    s.Start.Position >= startMatch.Index &&
+                    s.Start.Position >= startIndex &&
                     s.Start.Position + s.Length <= endIndex)
                 .ToList()
             )
@@ -247,17 +301,31 @@ namespace LitSyntaxHighlighter.Tagger
             string literal = span.GetText();
 
             // check for changed spans
+            int startIndex = 0;
+            int endIndex = span.Length;
             foreach (Match startMatch in _openTemplateRegex.Matches(literal))
             {
-                var subSpan = new SnapshotSpan(span.Start + startMatch.Index + startMatch.Length, span.Length - (startMatch.Index + startMatch.Length));
+                var subSpanStartIndex = startMatch.Index + startMatch.Length;
+                var subSpanEndIndex = FindMatchingCloseTemplate(span, subSpanStartIndex);
+                var subSpan = new SnapshotSpan(span.Start + subSpanStartIndex, subSpanEndIndex - subSpanStartIndex);
                 var isChanged = change.IntersectsWith(subSpan);
 
                 if (isChanged)
                 {
-                    var endIndex = ProcessTemplate(literal, startMatch.Index + startMatch.Length);
-                    RemoveOldTemplateSpans(startMatch, endIndex);
+                    startIndex = startIndex < subSpan.Start ? subSpan.Start : startIndex;
+                    endIndex = endIndex > subSpanEndIndex ? subSpanEndIndex : endIndex;
+                }
+                else
+                {
+                    if (change.Start < subSpan.Start)
+                    {
+                        endIndex = endIndex > subSpan.Start ? subSpan.Start : endIndex;
+                    }
                 }
             }
+
+            ProcessTemplate(literal, startIndex);
+            RemoveOldTemplateSpans(startIndex, endIndex);
         }
 
         private int ProcessTemplate(string literal, int startIndex)

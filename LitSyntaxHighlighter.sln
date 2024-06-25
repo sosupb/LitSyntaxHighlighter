@@ -5,6 +5,12 @@ VisualStudioVersion = 17.9.34902.65
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LitSyntaxHighlighter", "LitSyntaxHighlighter\LitSyntaxHighlighter.csproj", "{3DB2FD9B-2135-4C43-8730-DBE619F180DD}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C7AA9BE8-46CE-4BDE-B10F-2F6AD47CAD56}"
+	ProjectSection(SolutionItems) = preProject
+		TestFiles\test.js = TestFiles\test.js
+		TestFiles\test.ts = TestFiles\test.ts
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
