@@ -25,8 +25,9 @@ namespace LitSyntaxHighlighter.Tagger.TagDefinitions
         public LitTemplateSelectedElementNameDarkFormatDefinition()
         {
             this.DisplayName = "Lit Selected Element Name Dark Character (String Literal)";
-            this.ForegroundColor = Color.FromRgb(86, 156, 214);
-            this.BackgroundColor = Color.FromRgb(33, 89, 135);
+            this.ForegroundColor = Color.FromRgb(139, 187, 227);
+            this.BackgroundColor = Color.FromRgb(22, 60, 91);
+            this.IsBold = true;
         }
     }
 
@@ -41,6 +42,7 @@ namespace LitSyntaxHighlighter.Tagger.TagDefinitions
             this.DisplayName = "Lit Selected Element Name Light Character (String Literal)";
             this.ForegroundColor = Color.FromRgb(128, 0, 0);
             this.BackgroundColor = Color.FromRgb(185, 214, 238);
+            this.IsBold = true;
         }
     }
 }

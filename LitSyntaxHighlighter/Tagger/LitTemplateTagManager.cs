@@ -1,7 +1,5 @@
 ﻿using LitSyntaxHighlighter.Utility;
 using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.Text.Classification;
-using Microsoft.VisualStudio.Text.Tagging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -31,49 +29,77 @@ namespace LitSyntaxHighlighter.Tagger
             InsideCloseTag,
             InsideCommentTag,
         }
+
         private readonly Regex _openTemplateRegex = new Regex("html`", RegexOptions.IgnoreCase);
 
         private SortedDictionary<SnapshotSpan, TagType> _tagCache;
-        private LitTemplateTagRegistry _tagRegistry;
-        private ITextSnapshot _snapshot;
+        private ITextSnapshot _currentSnapshot;
+        private bool _isParsingTags;
 
-        public LitTemplateTagManager(IClassificationTypeRegistryService classificationTypeRegistryService)
+        public bool IsDirty 
+        {  
+            get
+            {
+                return this._isParsingTags || (_tagCache.Count > 0 && _tagCache.Any(s => s.Key.Snapshot != _currentSnapshot));
+            }
+        }
+        public KeyValuePair<SnapshotSpan, TagType>? SelectedOpenTag { get; private set; }
+        public KeyValuePair<SnapshotSpan, TagType>? SelectedCloseTag {  get; private set; }
+
+        public LitTemplateTagManager()
         {
-            _tagRegistry = new LitTemplateTagRegistry(classificationTypeRegistryService);
-            _tagCache = new SortedDictionary<SnapshotSpan, TagType>(new SnapshotSpanComparer());
+            this._tagCache = new SortedDictionary<SnapshotSpan, TagType>(new SnapshotSpanComparer());
         }
 
-        public IEnumerable<TagSpan<ClassificationTag>> GetClassifications(SnapshotSpan span)
+        public IEnumerable<KeyValuePair<SnapshotSpan,TagType>> GetClassifications(SnapshotSpan span)
         {
+            if(IsDirty || span.Snapshot != _currentSnapshot)
+            {
+                TryParseTags(span.Snapshot);
+                return Enumerable.Empty<KeyValuePair<SnapshotSpan, TagType>>();
+            }
+
             return _tagCache.Keys
                 .Where(s => s.IntersectsWith(span))
-                .Select(s => new TagSpan<ClassificationTag>(s, _tagRegistry.ClassificationTags[_tagCache[s]]));
+                .Select(s => {
+                    if (SelectedOpenTag.HasValue && s == SelectedOpenTag.Value.Key)
+                        return SelectedOpenTag.Value;
+                    if(SelectedCloseTag.HasValue && s == SelectedCloseTag.Value.Key)
+                        return SelectedCloseTag.Value;
+                    return new KeyValuePair<SnapshotSpan, TagType>(s, _tagCache[s]);
+
+                });
         }
 
-        public bool IsSnapshotValid(ITextSnapshot snapshot)
+        public void TryParseTags(ITextSnapshot newSnapshot, ITextChange change = null)
         {
-            return _snapshot == snapshot;
-        }
-
-        public void TryParseTags(SnapshotSpan span, IEnumerable<ITextChange> changes = null)
-        {
+            if (this._isParsingTags)
+                return;
             try
             {
-                if (_snapshot == span.Snapshot)
+                if (_currentSnapshot == newSnapshot)
                 {
                     return;
                 }
-                _snapshot = span.Snapshot;
 
-                if (changes == null || changes.Count() == 0)
+                this._isParsingTags = true;
+                _currentSnapshot = newSnapshot;
+
+                if (change == null)
                 {
                     _tagCache.Clear();
-                    ProcessEntireSpan(span);
+                    ProcessEntireSpan(new SnapshotSpan(_currentSnapshot, 0, _currentSnapshot.Length));
                 }
                 else
                 {
-                    ProcessSpecificSpans(span, changes.Select(s => s.NewSpan));
+                    ProcessSpecificSpans(new SnapshotSpan(_currentSnapshot, 0, _currentSnapshot.Length), change.NewSpan);
                 }
+
+                if (IsDirty)
+                {
+                    CleanupRemainingSnapshotTags();
+                }
+                _isParsingTags = false;
             }
             catch(Exception ex)
             {
@@ -82,47 +108,70 @@ namespace LitSyntaxHighlighter.Tagger
             }
         }
 
-        private bool IsNameChar(char c)
+        public bool IsNameChar(char c)
         {
             return c == '_' || c == '-' || char.IsLetterOrDigit(c);
         }
 
-        private bool IsTextChar(char c)
+        public bool IsTextChar(char c)
         {
             return c == '_' || char.IsLetterOrDigit(c);
         }
 
-        public void UpdateSelectedClassification(SnapshotPoint selectionPoint)
+        public void TryUpdateSelectedClassification(SnapshotPoint selectionPoint)
         {
-            // reset old tags
-            var oldSelectedTags = _tagCache.Where(s => s.Value == TagType.SelectedElement || s.Value == TagType.SelectedCloseElement || s.Value == TagType.SelectedSelfCloseElement).ToList();
-            foreach (var tag in oldSelectedTags)
+            try
             {
-                _tagCache[tag.Key] = tag.Value == TagType.SelectedElement ? TagType.Element : tag.Value == TagType.SelectedCloseElement ? TagType.CloseElement : TagType.SelfCloseElement;
-            }
+                // reset selected tags
+                SelectedOpenTag = null;
+                SelectedCloseTag = null;
 
-            // find new tags
-            var selectedSpan = _tagCache
-                .Where(s => (s.Key.Contains(selectionPoint) || s.Key.Contains(selectionPoint - 1)) && (s.Value == TagType.Element || s.Value == TagType.CloseElement || s.Value == TagType.SelfCloseElement))
-                .Select(s => (SnapshotSpan?)s.Key)
-                .FirstOrDefault();
-            if (selectedSpan.HasValue)
-            {
-                var key = selectedSpan.Value;
-                var type = _tagCache[key];
-                CreateTagCacheEntry(key.Start, key.Length, type == TagType.Element ? TagType.SelectedElement : type == TagType.CloseElement ? TagType.SelectedCloseElement : TagType.SelfCloseElement);
-                if (type != TagType.SelfCloseElement)
+                // find new tags
+                var selectedSpan = _tagCache
+                    .Where(s =>
+                        (
+                            s.Key.Snapshot == selectionPoint.Snapshot &&
+                            s.Key.Contains(selectionPoint) ||
+                            (selectionPoint > 0 && s.Key.Contains(selectionPoint - 1))
+                        ) &&
+                        ((s.Value & (TagType.OpenTags | TagType.CloseTags)) > 0)
+                    )
+                    .Select(s => (SnapshotSpan?)s.Key)
+                    .FirstOrDefault();
+                if (selectedSpan.HasValue)
                 {
-                    FindMatchingTag(key, type == TagType.Element ? TagType.CloseElement : TagType.Element);
+                    var key = selectedSpan.Value;
+                    var type = _tagCache[key];
+                    TagType? target = null;
+                    if((type & TagType.OpenTags) > 0)
+                    {
+                        SelectedOpenTag = new KeyValuePair<SnapshotSpan, TagType>(key, type == TagType.SelfCloseElement ? TagType.SelectedSelfCloseElement : TagType.SelectedOpenElement);
+                        target = type == TagType.Element ? TagType.CloseElement : TagType.CommentEnd;
+                        if (type != TagType.SelfCloseElement)
+                        {
+                            SelectedCloseTag = FindMatchingTag(key, type, target.Value);
+                        }
+                    }
+                    else
+                    {
+                        SelectedCloseTag = new KeyValuePair<SnapshotSpan, TagType>(key, TagType.SelectedCloseElement);
+                        target = type == TagType.CloseElement ? TagType.Element : TagType.CommentStart;
+                        SelectedOpenTag = FindMatchingTag(key, type, target.Value);
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                _tagCache.Clear();
+                Debug.WriteLine($"ERROR: {ex.Message}");
+            }
         }
-
-        private void FindMatchingTag(SnapshotSpan span, TagType targetType)
+        // debug this now
+        private KeyValuePair<SnapshotSpan, TagType>? FindMatchingTag(SnapshotSpan span, TagType type, TagType targetType)
         {
-            bool isOpen = targetType == TagType.CloseElement;
+            bool isOpen = (type & TagType.OpenTags) > 0;
             var possibleTags = _tagCache.Where(s =>
-                s.Key.GetText() == span.GetText() &&
+                (s.Key.GetText() == span.GetText() || ((s.Value & TagType.CommentTags) > 0 && (type & TagType.CommentTags) > 0)) && 
                 (isOpen ? s.Key.Start > span.Start : s.Key.Start < span.Start)
             );
 
@@ -133,21 +182,46 @@ namespace LitSyntaxHighlighter.Tagger
                 {
                     if (tagDepth == 0)
                     {
-                        CreateTagCacheEntry(tag.Key.Start, tag.Key.Length, tag.Value == TagType.Element ? TagType.SelectedElement : TagType.SelectedCloseElement);
-                        break;
+                        return new KeyValuePair<SnapshotSpan, TagType>(tag.Key, isOpen ? TagType.SelectedCloseElement : TagType.SelectedOpenElement);
                     }
                     tagDepth -= 1;
                 }
-                else if(tag.Value == (isOpen ? TagType.Element : TagType.CloseElement))
+                else if(tag.Value == type)
                 {
                     tagDepth += 1;
                 }
+            }
+            return null;
+        }
+
+        private void CleanupRemainingSnapshotTags()
+        {
+            // update snapshot for remaining spans not effected by the change
+            foreach (var cache in _tagCache.ToList().Where(cache => _tagCache.Remove(cache.Key)))
+            {
+                var newKey = cache.Key.TranslateTo(_currentSnapshot, SpanTrackingMode.EdgeInclusive);
+                if (!_tagCache.ContainsKey(newKey))
+                    _tagCache.Add(newKey, cache.Value);
+            }
+        }
+
+        private void RemoveOldTemplateSpans(Match startMatch, int endIndex)
+        {
+            // remove any old tags from the current template
+            foreach (var oldCache in _tagCache.Keys
+                .Where(s => s.Snapshot != _currentSnapshot &&
+                    s.Start.Position >= startMatch.Index &&
+                    s.Start.Position + s.Length <= endIndex)
+                .ToList()
+            )
+            {
+                _tagCache.Remove(oldCache);
             }
         }
 
         private void CreateTagCacheEntry(int index, int length, TagType type)
         {
-            var key = new SnapshotSpan(_snapshot, index, length);
+            var key = new SnapshotSpan(_currentSnapshot, index, length);
             if (_tagCache.ContainsKey(key))
             {
                 _tagCache[key] = type;
@@ -168,72 +242,25 @@ namespace LitSyntaxHighlighter.Tagger
             }
         }
 
-        private void ProcessSpecificSpans(SnapshotSpan span, IEnumerable<Span> changes)
+        private void ProcessSpecificSpans(SnapshotSpan span, Span change)
         {
             string literal = span.GetText();
-
-            AutoCompleteSelectedTag(ref span, ref literal, changes);
 
             // check for changed spans
             foreach (Match startMatch in _openTemplateRegex.Matches(literal))
             {
                 var subSpan = new SnapshotSpan(span.Start + startMatch.Index + startMatch.Length, span.Length - (startMatch.Index + startMatch.Length));
-                var changedSpans = changes.Where(s => s.IntersectsWith(subSpan));
+                var isChanged = change.IntersectsWith(subSpan);
 
-                if (changedSpans.Count() > 0)
+                if (isChanged)
                 {
-
                     var endIndex = ProcessTemplate(literal, startMatch.Index + startMatch.Length);
-
                     RemoveOldTemplateSpans(startMatch, endIndex);
                 }
             }
-
-            // update snapshot for remaining spans not effected by the change
-            foreach (var cache in _tagCache.ToList().Where(cache => _tagCache.Remove(cache.Key)))
-            {
-                var newKey = cache.Key.TranslateTo(_snapshot, SpanTrackingMode.EdgeInclusive);
-                if (!_tagCache.ContainsKey(newKey))
-                    _tagCache.Add(newKey, cache.Value);
-            }
         }
 
-        private void RemoveOldTemplateSpans(Match startMatch, int endIndex)
-        {
-            // remove any old tags from the current template
-            foreach (var oldCache in _tagCache.Keys
-                .Where(s => s.Snapshot != _snapshot &&
-                    s.Start.Position >= startMatch.Index &&
-                    s.Start.Position + s.Length <= endIndex)
-                .ToList()
-            )
-            {
-                _tagCache.Remove(oldCache);
-            }
-        }
-
-        private void AutoCompleteSelectedTag(ref SnapshotSpan span, ref string literal, IEnumerable<Span> changedSpans)
-        {
-            // check for selected element name change and update closing tag
-            var selectedTag = _tagCache.Where(s => s.Value == TagType.SelectedElement).Select(s => (SnapshotSpan?)s.Key).FirstOrDefault();
-            var selectedCloseTag = _tagCache.Where(s => s.Value == TagType.SelectedCloseElement).Select(s => (SnapshotSpan?)s.Key).FirstOrDefault();
-            if (selectedTag.HasValue && selectedCloseTag.HasValue)
-            {
-                var nameChange = changedSpans.Where(c => c.IntersectsWith(selectedTag.Value.Span)).Select(c => (Span?)c).FirstOrDefault();
-                if (nameChange.HasValue)
-                {
-                    var newName = selectedTag.Value.TranslateTo(_snapshot, SpanTrackingMode.EdgeInclusive).GetText();
-                    var closeTagSpan = selectedCloseTag.Value.TranslateTo(_snapshot, SpanTrackingMode.EdgeInclusive);
-                    if (newName.All(c => IsNameChar(c)))
-                    {
-                        span.Snapshot.TextBuffer.Replace(closeTagSpan.Span, newName);
-                    }
-                    literal = span.GetText();
-                }
-            }
-        }
-
-        public int ProcessTemplate(string literal, int startIndex)
+        private int ProcessTemplate(string literal, int startIndex)
         {
             Stack<TemplateState> state = new Stack<TemplateState>();
             state.Push(TemplateState.InsideTemplate);
@@ -328,6 +355,11 @@ namespace LitSyntaxHighlighter.Tagger
                                     state.Push(TemplateState.TagStart);
                                 }
                             }
+                            else if (peek == TemplateState.InsideTag)
+                            {
+                                state.Pop();
+                                currentCharIndex -= 1;
+                            }
                             break;
                         }
                     case '/':
@@ -374,7 +406,8 @@ namespace LitSyntaxHighlighter.Tagger
                                 {
                                     state.Pop();
                                     CreateTagCacheEntry(nameCharIndex.Value, currentCharIndex - nameCharIndex.Value - 2, TagType.Comment);
-                                    CreateTagCacheEntry(currentCharIndex - 2, 3, TagType.Delimiter);
+                                    CreateTagCacheEntry(currentCharIndex - 2, 2, TagType.CommentEnd);
+                                    CreateTagCacheEntry(currentCharIndex, 1, TagType.Delimiter);
                                     nameCharIndex = null;
                                 }
                             }
@@ -419,7 +452,16 @@ namespace LitSyntaxHighlighter.Tagger
                                 {
                                     state.Pop();
                                     state.Push(TemplateState.InsideCommentTag);
-                                    CreateTagCacheEntry(currentCharIndex, 3, TagType.Delimiter);
+                                    CreateTagCacheEntry(currentCharIndex, 3, TagType.CommentStart);
+                                    currentCharIndex += 2;
+                                    nameCharIndex = currentCharIndex;
+                                }
+                            }
+                            else if (peek == TemplateState.InsideCommentTag && literal.Length > currentCharIndex + 3)
+                            {
+                                if (literal.Substring(currentCharIndex - 1, 4) == "<!--")
+                                {
+                                    CreateTagCacheEntry(currentCharIndex, 3, TagType.CommentStart);
                                     currentCharIndex += 2;
                                     nameCharIndex = currentCharIndex;
                                 }
