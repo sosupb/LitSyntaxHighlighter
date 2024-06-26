@@ -91,9 +91,13 @@ namespace LitSyntaxHighlighter.Tagger
                     _tagCache.Clear();
                     ProcessEntireSpan(new SnapshotSpan(_currentSnapshot, 0, _currentSnapshot.Length));
                 }
-                else
+                else if(change.NewSpan.Start > 3)
                 {
-                    ProcessSpecificSpans(new SnapshotSpan(_currentSnapshot, 0, _currentSnapshot.Length), change.NewSpan);
+                    var changedText = new SnapshotSpan(_currentSnapshot, change.NewSpan.Start - 4, 5).GetText();
+                    if(changedText != "html`")
+                    {
+                        ProcessSpecificSpans(new SnapshotSpan(_currentSnapshot, 0, _currentSnapshot.Length), change.NewSpan);
+                    }
                 }
 
                 if (IsDirty)
@@ -123,6 +127,16 @@ namespace LitSyntaxHighlighter.Tagger
         {
             try
             {
+                // skip resetting an empty tag
+                if (SelectedOpenTag.HasValue)
+                {
+                    var newSelectedOpenTag = SelectedOpenTag.Value.Key.TranslateTo(selectionPoint.Snapshot, SpanTrackingMode.EdgeInclusive);
+                    if(newSelectedOpenTag.Length == 0 && newSelectedOpenTag.Start.Position == selectionPoint.Position)
+                    {
+                        return;
+                    }
+                }
+
                 // reset selected tags
                 SelectedOpenTag = null;
                 SelectedCloseTag = null;
@@ -172,27 +186,36 @@ namespace LitSyntaxHighlighter.Tagger
         {
             bool isOpen = (type & TagType.OpenTags) > 0;
             var possibleTags = _tagCache.Where(s =>
-                (s.Key.GetText() == span.GetText() || ((s.Value & TagType.CommentTags) > 0 && (type & TagType.CommentTags) > 0)) && 
-                (isOpen ? s.Key.Start > span.Start : s.Key.Start < span.Start)
+                s.Key.GetText() == span.GetText() || 
+                ((s.Value & TagType.CommentTags) > 0 && (type & TagType.CommentTags) > 0)
             );
 
             int tagDepth = 0;
-            foreach(var tag in isOpen ? possibleTags : possibleTags.Reverse())
+            int? targetTagDepth = null;
+            KeyValuePair<SnapshotSpan, TagType>? matchingTag = null;
+            foreach (var tag in isOpen ? possibleTags : possibleTags.Reverse())
             {
-                if(tag.Value == targetType)
+                if(tag.Key == span)
                 {
-                    if (tagDepth == 0)
+                    targetTagDepth = tagDepth;
+                }
+                else if(tag.Value == targetType)
+                {
+                    if (targetTagDepth.HasValue && tagDepth == targetTagDepth && !matchingTag.HasValue)
                     {
-                        return new KeyValuePair<SnapshotSpan, TagType>(tag.Key, isOpen ? TagType.SelectedCloseElement : TagType.SelectedOpenElement);
+                        matchingTag = new KeyValuePair<SnapshotSpan, TagType>(tag.Key, isOpen ? TagType.SelectedCloseElement : TagType.SelectedOpenElement);
                     }
-                    tagDepth -= 1;
+                    else
+                    {
+                        tagDepth -= 1;
+                    }
                 }
                 else if(tag.Value == type)
                 {
                     tagDepth += 1;
                 }
             }
-            return null;
+            return tagDepth != 0 ? null : matchingTag;
         }
 
         private int FindMatchingCloseTemplate(SnapshotSpan span, int startIndex)
@@ -250,8 +273,8 @@ namespace LitSyntaxHighlighter.Tagger
 
         private void CleanupRemainingSnapshotTags()
         {
-            // update snapshot for remaining spans not effected by the change
-            foreach (var cache in _tagCache.ToList().Where(cache => _tagCache.Remove(cache.Key)))
+            // update snapshot version for remaining spans not effected by the change
+            foreach (var cache in _tagCache.Where(c => c.Key.Snapshot != _currentSnapshot).ToList().Where(cache => _tagCache.Remove(cache.Key)))
             {
                 var newKey = cache.Key.TranslateTo(_currentSnapshot, SpanTrackingMode.EdgeInclusive);
                 if (!_tagCache.ContainsKey(newKey))
@@ -261,11 +284,11 @@ namespace LitSyntaxHighlighter.Tagger
 
         private void RemoveOldTemplateSpans(int startIndex, int endIndex)
         {
-            // remove any old tags from the current template
+            // remove any old tags from the current template ex: spans that no longer exist in the current snapshot
             foreach (var oldCache in _tagCache.Keys
                 .Where(s => s.Snapshot != _currentSnapshot &&
                     s.Start.Position >= startIndex &&
-                    s.Start.Position + s.Length <= endIndex)
+                    s.Start.Position + s.Length < endIndex)
                 .ToList()
             )
             {

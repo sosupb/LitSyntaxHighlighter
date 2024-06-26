@@ -76,12 +76,12 @@ namespace LitSyntaxHighlighter.Tagger
             {
                 _state = AutoTaggerState.Editing;
                 var edits = new Queue<AutoTaggerEdit>(_autoTaggerEdits);
+                _autoTaggerEdits.Clear();
                 EditTextBuffer?.Invoke(this, new AutoTaggerEventArgs()
                 {
                     Edits = edits,
                     Snapshot = snapshot
                 });
-                _autoTaggerEdits.Clear();
                 _state = AutoTaggerState.Waiting;
             }
         }
