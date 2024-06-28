@@ -39,7 +39,6 @@ namespace LitSyntaxHighlighter.Tagger
             }
         }
 
-        private bool _isLightTheme;
         private IDictionary<TagType, ClassificationTag> _darkThemeTags;
         private IDictionary<TagType, ClassificationTag> _lightThemeTags;
 
