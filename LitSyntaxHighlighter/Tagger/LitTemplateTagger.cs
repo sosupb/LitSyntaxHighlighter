@@ -3,7 +3,6 @@ using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text.Tagging;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -75,14 +74,14 @@ namespace LitSyntaxHighlighter.Tagger
                     _sourceBuffer.CurrentSnapshot.Length)));
         }
 
-        private void OnBufferChanged(object sender, TextContentChangedEventArgs e)
+        private async void OnBufferChanged(object sender, TextContentChangedEventArgs e)
         {
             if (e.After != _sourceBuffer.CurrentSnapshot)
                 return;
 
             foreach (var change in e.Changes)
             {
-                _autoTagger.QueueUpAutoTagging(_sourceBuffer, new SnapshotSpan(_sourceBuffer.CurrentSnapshot, change.NewSpan.Start, change.NewSpan.Length));
+                await _autoTagger.QueueUpAutoTaggingAsync(_sourceBuffer, new SnapshotSpan(_sourceBuffer.CurrentSnapshot, change.NewSpan.Start, change.NewSpan.Length));
                 _tagManager.TryParseTags(_sourceBuffer.CurrentSnapshot, change);
             }
         }

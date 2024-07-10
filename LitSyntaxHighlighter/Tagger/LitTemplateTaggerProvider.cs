@@ -27,7 +27,7 @@ namespace LitSyntaxHighlighter.Tagger
             }
 
             ITextUndoHistory textUndoHistory;
-            if(_textUndoHistoryRegistry == null || !_textUndoHistoryRegistry.TryGetHistory(buffer, out textUndoHistory))
+            if (_textUndoHistoryRegistry == null || !_textUndoHistoryRegistry.TryGetHistory(buffer, out textUndoHistory))
             {
                 return null;
             }

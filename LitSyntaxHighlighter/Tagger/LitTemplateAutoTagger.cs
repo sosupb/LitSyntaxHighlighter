@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.Text;
-using System;
+using Microsoft.VisualStudio.Threading;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace LitSyntaxHighlighter.Tagger
@@ -113,35 +114,53 @@ namespace LitSyntaxHighlighter.Tagger
             }
         }
 
-        public void QueueUpAutoTagging(ITextBuffer sourceBuffer, SnapshotSpan change)
+        public async Task QueueUpAutoTaggingAsync(ITextBuffer sourceBuffer, SnapshotSpan change)
         {
-            _state = AutoTaggerState.Queuing;
-            var selectedTag = _tagManager.SelectedOpenTag;
-            if (selectedTag.HasValue && selectedTag.Value.Key is var selectedSpan && change.Span.IntersectsWith(selectedTag.Value.Key))
+            if (_state != AutoTaggerState.Waiting)
+                return;
+
+            try
             {
-                var newName = selectedSpan.TranslateTo(change.Snapshot, SpanTrackingMode.EdgeInclusive).GetText();
-                var selectedCloseTag = _tagManager.SelectedCloseTag;
-                if (selectedCloseTag.HasValue && selectedCloseTag.Value.Key is var selectedCloseSpan)
+                _state = AutoTaggerState.Queuing;
+                GeneralOptions options = await GeneralOptions.GetLiveInstanceAsync();
+
+                var selectedTag = _tagManager.SelectedOpenTag;
+                if (selectedTag.HasValue && selectedTag.Value.Key is var selectedSpan && change.Span.IntersectsWith(selectedTag.Value.Key))
                 {
-                    var closeTagSpan = selectedCloseSpan.TranslateTo(change.Snapshot, SpanTrackingMode.EdgeInclusive);
-                    if (newName.All(c => _tagManager.IsNameChar(c)))
+                    var newName = selectedSpan.TranslateTo(change.Snapshot, SpanTrackingMode.EdgeInclusive).GetText();
+                    var selectedCloseTag = _tagManager.SelectedCloseTag;
+                    if (options.AutoRenameClosingTags && selectedCloseTag.HasValue && selectedCloseTag.Value.Key is var selectedCloseSpan)
                     {
-                        // Replace old close tag name directly with new open tag name
-                        sourceBuffer.Replace(closeTagSpan.Span, newName);
+                        var closeTagSpan = selectedCloseSpan.TranslateTo(change.Snapshot, SpanTrackingMode.EdgeInclusive);
+                        if (newName.All(c => _tagManager.IsNameChar(c)))
+                        {
+                            // Replace old close tag name directly with new open tag name
+                            sourceBuffer.Replace(closeTagSpan.Span, newName);
+                        }
+                    }
+                    else if (options.AutoCloseTags)
+                    {
+                        if (newName.LastOrDefault() == '>')
+                        {
+                            // Queue new matching close tag
+                            _autoTaggerEdits.Enqueue(new AutoTaggerEdit(change.Span, $"</{newName}", "Insert", true));
+                        }
+                        else if (newName == "!-- ")
+                        {
+                            // Queue new matching comment close tag
+                            _autoTaggerEdits.Enqueue(new AutoTaggerEdit(change.Span, $" -->", "Insert", true));
+                        }
                     }
                 }
-                else if (newName.LastOrDefault() == '>')
-                {
-                    // Queue new matching close tag
-                    _autoTaggerEdits.Enqueue(new AutoTaggerEdit(change.Span, $"</{newName}", "Insert", true));
-                }
-                else if (newName == "!-- ")
-                {
-                    // Queue new matching comment close tag
-                    _autoTaggerEdits.Enqueue(new AutoTaggerEdit(change.Span, $" -->", "Insert", true));
-                }
             }
-            _state = AutoTaggerState.Waiting;
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ERROR: {ex.Message}");
+            }
+            finally
+            {
+                _state = AutoTaggerState.Waiting;
+            }
         }
     }
 }
