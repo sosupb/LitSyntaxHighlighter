@@ -74,14 +74,14 @@ namespace LitSyntaxHighlighter.Tagger
                     _sourceBuffer.CurrentSnapshot.Length)));
         }
 
-        private async void OnBufferChanged(object sender, TextContentChangedEventArgs e)
+        private void OnBufferChanged(object sender, TextContentChangedEventArgs e)
         {
             if (e.After != _sourceBuffer.CurrentSnapshot)
                 return;
 
             foreach (var change in e.Changes)
             {
-                await _autoTagger.QueueUpAutoTaggingAsync(_sourceBuffer, new SnapshotSpan(_sourceBuffer.CurrentSnapshot, change.NewSpan.Start, change.NewSpan.Length));
+                _autoTagger.QueueUpAutoTaggingAsync(_sourceBuffer, new SnapshotSpan(_sourceBuffer.CurrentSnapshot, change.NewSpan.Start, change.NewSpan.Length)).FireAndForget();
                 _tagManager.TryParseTags(_sourceBuffer.CurrentSnapshot, change);
             }
         }
