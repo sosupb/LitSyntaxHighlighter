@@ -132,7 +132,7 @@ namespace LitSyntaxHighlighter.Tagger
                     if (options.AutoRenameClosingTags && selectedCloseTag.HasValue && selectedCloseTag.Value.Key is var selectedCloseSpan)
                     {
                         var closeTagSpan = selectedCloseSpan.TranslateTo(change.Snapshot, SpanTrackingMode.EdgeInclusive);
-                        if (newName.All(c => _tagManager.IsNameChar(c)))
+                        if (newName.All(c => _tagManager.IsNameChar(c)) && closeTagSpan.GetText() != newName)
                         {
                             // Replace old close tag name directly with new open tag name
                             sourceBuffer.Replace(closeTagSpan.Span, newName);

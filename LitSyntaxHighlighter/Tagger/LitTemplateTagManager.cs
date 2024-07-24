@@ -1,6 +1,5 @@
 ﻿using LitSyntaxHighlighter.Utility;
 using Microsoft.VisualStudio.Text;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -32,6 +31,7 @@ namespace LitSyntaxHighlighter.Tagger
 
         private readonly Regex _openTemplateRegex = new Regex("html`", RegexOptions.IgnoreCase);
         private readonly Regex _closeTemplateRegex = new Regex("(`|{|}|\")", RegexOptions.IgnoreCase);
+        private readonly string _allowedSymbolsBetweenTags = "!@#$%^&*()-_{}[]|/=+.,;:\"\'~";
 
         private SortedDictionary<SnapshotSpan, TagType> _tagCache;
         private ITextSnapshot _currentSnapshot;
@@ -120,7 +120,7 @@ namespace LitSyntaxHighlighter.Tagger
 
         public bool IsTextChar(char c)
         {
-            return c == '_' || char.IsLetterOrDigit(c);
+            return _allowedSymbolsBetweenTags.Contains(c) || char.IsLetterOrDigit(c);
         }
 
         public void TryUpdateSelectedClassification(SnapshotPoint selectionPoint)
@@ -410,7 +410,8 @@ namespace LitSyntaxHighlighter.Tagger
                         }
                     case '"':
                         {
-                            if (state.Peek() >= TemplateState.InsideTemplate)
+                            var peek = state.Peek();
+                            if (peek >= TemplateState.InsideTemplate && peek != TemplateState.BetweenTags && peek != TemplateState.BetweenTagsText)
                             {
                                 state.Push(TemplateState.PauseString);
                             }
