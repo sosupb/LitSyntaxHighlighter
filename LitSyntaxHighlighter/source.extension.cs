@@ -11,7 +11,7 @@ namespace LitSyntaxHighlighter
         public const string Name = "LitSyntaxHighlighter";
         public const string Description = @"Visual Studio extension to allow syntax highlighting when working with Lit.dev html templates.";
         public const string Language = "en-US";
-        public const string Version = "1.1";
+        public const string Version = "1.2";
         public const string Author = "Marc Teixeira";
         public const string Tags = "LIT, JavaScript, TypeScript, Syntax Highlighting, Highlight, Highlighting";
     }
